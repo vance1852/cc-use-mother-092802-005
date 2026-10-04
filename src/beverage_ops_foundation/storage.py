@@ -63,6 +63,79 @@ CREATE TABLE IF NOT EXISTS audit_events (
     event_hash TEXT NOT NULL UNIQUE,
     occurred_at TEXT NOT NULL
 );
+-- 渠道动销对账台账 ------------------------------------------------------
+CREATE TABLE IF NOT EXISTS channel_products (
+    product_id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS channel_channels (
+    channel_id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS inventory_events (
+    event_id TEXT PRIMARY KEY,
+    event_type TEXT NOT NULL,
+    product_id TEXT NOT NULL,
+    batch_no TEXT NOT NULL,
+    channel_id TEXT NOT NULL,
+    quantity INTEGER NOT NULL CHECK(quantity >= 0),
+    variance_qty INTEGER,
+    source_type TEXT NOT NULL,
+    source_ref TEXT NOT NULL,
+    business_date TEXT NOT NULL,
+    period_id TEXT NOT NULL,
+    origin_period TEXT NOT NULL,
+    is_adjustment INTEGER NOT NULL CHECK(is_adjustment IN (0, 1)),
+    unit_cost TEXT,
+    stream_key TEXT,
+    stream_seq INTEGER,
+    payload_json TEXT NOT NULL,
+    payload_hash TEXT NOT NULL,
+    recorded_by TEXT NOT NULL,
+    recorded_at TEXT NOT NULL,
+    UNIQUE(source_type, source_ref)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_events_stream
+    ON inventory_events(stream_key, stream_seq) WHERE stream_key IS NOT NULL;
+CREATE INDEX IF NOT EXISTS ix_events_rebuild
+    ON inventory_events(channel_id, period_id, product_id, batch_no);
+CREATE TABLE IF NOT EXISTS stream_anomalies (
+    anomaly_id TEXT PRIMARY KEY,
+    stream_key TEXT NOT NULL,
+    stream_seq INTEGER NOT NULL,
+    request_id TEXT NOT NULL,
+    existing_event_id TEXT NOT NULL,
+    existing_payload_hash TEXT NOT NULL,
+    incoming_payload_hash TEXT NOT NULL,
+    detected_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS disputes (
+    dispute_id TEXT PRIMARY KEY,
+    product_id TEXT NOT NULL,
+    batch_no TEXT NOT NULL,
+    channel_id TEXT NOT NULL,
+    quantity INTEGER NOT NULL CHECK(quantity > 0),
+    status TEXT NOT NULL CHECK(status IN ('open', 'resolved')),
+    source_type TEXT NOT NULL,
+    source_ref TEXT NOT NULL,
+    opened_event_id TEXT NOT NULL,
+    resolved_event_id TEXT,
+    resolution TEXT,
+    opened_at TEXT NOT NULL,
+    resolved_at TEXT
+);
+CREATE INDEX IF NOT EXISTS ix_disputes_freeze
+    ON disputes(channel_id, status, product_id, batch_no);
+CREATE TABLE IF NOT EXISTS period_closings (
+    period_id TEXT NOT NULL,
+    channel_id TEXT NOT NULL,
+    closed_at TEXT NOT NULL,
+    closed_by TEXT NOT NULL,
+    snapshot_hash TEXT NOT NULL,
+    PRIMARY KEY(period_id, channel_id)
+);
 """
 
 

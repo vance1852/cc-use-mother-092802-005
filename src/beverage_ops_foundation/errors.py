@@ -33,3 +33,15 @@ class ConflictError(DomainError):
 
     code = "conflict"
     status = 409
+
+
+class SequenceForkError(ConflictError):
+    """离线补传在同一来源序号上出现不同内容，判定为序列分叉。"""
+
+    code = "sequence_fork"
+
+
+class PeriodClosedError(ConflictError):
+    """目标会计期间已经关账，记录只能追加到后续期间。"""
+
+    code = "period_closed"
